@@ -893,9 +893,8 @@ struct PathTracer
         // Check if the scatter event is samplable by the light sampling technique.
         const bool isLightSamplable = path.isLightSamplable();
 
-        // Add emitted radiance.
-        // The primary hit is always included, secondary hits only if emissive lights are enabled and the full light contribution hasn't been sampled elsewhere.
-        bool computeEmissive = isPrimaryHit || kUseEmissiveLights && (!path.isLightSampled() || !isLightSamplable);
+        // Always add emissive radiance.
+        bool computeEmissive = isPrimaryHit || kUseEmissiveLights;
 
         float3 attenuatedEmission = 0.f;
         if (computeEmissive && any(bsdfProperties.emission > 0.f))
@@ -1456,8 +1455,8 @@ struct PathTracer
         // Check if the scatter event is samplable by the light sampling technique.
         const bool isLightSamplable = path.isLightSamplable();
 
-        // Add env radiance.
-        bool computeEnv = kUseEnvLight && (!path.isLightSampled() || !isLightSamplable);
+        // Always add env radiance.
+        bool computeEnv = kUseEnvLight;
 
         float3 emitterRadiance = 0.f;
         if (computeEnv)
