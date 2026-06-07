@@ -11,6 +11,7 @@
 \usepackage{amsmath}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{dblfloatfix}
 \usepackage[hidelinks]{hyperref}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 
@@ -293,7 +294,7 @@ signed luminance bias, masked and full-frame non-finite pixel rates, and paired
 
 \section{Performance Results}
 
-\begin{figure*}[t]
+\begin{figure*}[!tbp]
 \centering
 \includegraphics[width=.76\textwidth]{dynamic-object-gpu-frame-time.png}
 \caption{Mean GPU frame time with one-standard-deviation error bars for one
@@ -335,7 +336,7 @@ comparable to renderer-only GPU timings.
 
 \section{Visual and Reference-Based Results}
 
-\begin{figure*}[t]
+\begin{figure*}[!tbp]
 \centering
 \includegraphics[width=\textwidth]{dynamic-object-five-mode-comparison.png}
 \caption{Representative falling-sphere frame at 1 spp. No temporal reuse
@@ -344,7 +345,7 @@ single-frame comparison cannot rank accuracy or temporal stability.}
 \label{fig:five-mode}
 \end{figure*}
 
-\begin{figure*}[t]
+\begin{figure*}[!tbp]
 \centering
 \includegraphics[width=.94\textwidth]{dynamic-object-detail-crops.png}
 \caption{Enlarged crops emphasizing the moving sphere, its boundary, and a
@@ -359,7 +360,7 @@ moving sphere boundary and newly revealed region provide useful locations for
 qualitative inspection. A single image without a reference cannot rank the
 accuracy or temporal stability of the reuse modes.
 
-\begin{figure*}[t]
+\begin{figure*}[!tbp]
 \centering
 \begin{subfigure}[t]{.48\textwidth}
 \centering
@@ -412,7 +413,7 @@ lowest reference error on immediately newly revealed pixels.
 \method{ScatterBackup}'s improvement over \method{ScatterOnly} confirms the
 value of a gather fallback when no useful forward-splatted history exists.
 
-\begin{figure*}[t]
+\begin{figure*}[!tbp]
 \centering
 \includegraphics[width=.94\textwidth]{disocclusion-representative-frame-44.png}
 \caption{Illustrative target frame 44: high-sample reference, three evaluated
