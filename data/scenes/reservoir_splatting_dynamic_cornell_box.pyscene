@@ -1,0 +1,32 @@
+sceneBuilder.importScene('test_scenes/cornell_box.pyscene')
+
+demoSphereMaterial = StandardMaterial('Reservoir Demo Sphere')
+demoSphereMaterial.baseColor = float4(0.7, 0.45, 0.15, 1.0)
+demoSphereMaterial.roughness = 0.25
+demoSphereMaterial.metallic = 1.0
+
+demoSphereMesh = TriangleMesh.createSphere()
+demoSphereNodeID = sceneBuilder.addNode(
+    'ReservoirDemoSphere',
+    Transform(scaling=0.05, translation=float3(0, -10, 0))
+)
+sceneBuilder.addMeshInstance(
+    demoSphereNodeID,
+    sceneBuilder.addTriangleMesh(demoSphereMesh, demoSphereMaterial, isAnimated=True)
+)
+
+demoCubeMaterial = StandardMaterial('Reservoir Demo Cube')
+demoCubeMaterial.baseColor = float4(0.8, 0.2, 0.2, 1.0)
+demoCubeMaterial.roughness = 0.85
+demoCubeMaterial.metallic = 0.0
+
+demoCubeMesh = TriangleMesh.createCube(float3(2.0))
+demoCubeNodeID = sceneBuilder.addNode(
+    'ReservoirDemoCube',
+    # Keep the preload transform distinct so SceneBuilder does not merge this node with the sphere.
+    Transform(scaling=0.05, translation=float3(0, -11, 0))
+)
+sceneBuilder.addMeshInstance(
+    demoCubeNodeID,
+    sceneBuilder.addTriangleMesh(demoCubeMesh, demoCubeMaterial, isAnimated=True)
+)

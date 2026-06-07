@@ -4265,6 +4265,16 @@ namespace Falcor
         mpAnimationController->setNodeEdited(nodeID);
     }
 
+    NodeID Scene::findNodeIDByName(const std::string& name) const
+    {
+        for (uint32_t nodeID = 0; nodeID < mSceneGraph.size(); nodeID++)
+        {
+            if (mSceneGraph[nodeID].name == name) return NodeID{ nodeID };
+        }
+
+        return NodeID::Invalid();
+    }
+
     void Scene::getMeshVerticesAndIndices(MeshID meshID, const std::map<std::string, ref<Buffer>>& buffers)
     {
         if (!mpLoadMeshPass)

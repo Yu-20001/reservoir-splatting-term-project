@@ -347,7 +347,37 @@ bool saveFileDialog(const FileDialogFilterVec& filters, std::filesystem::path& p
 
 bool chooseFolderDialog(std::filesystem::path& path)
 {
-    FALCOR_UNIMPLEMENTED();
+    if (!gtk_init_check(0, nullptr))
+        FALCOR_THROW("Failed to initialize GTK.");
+
+    GtkWidget* pParent = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    GtkWidget* pDialog = gtk_file_chooser_dialog_new(
+        "Select Folder",                          // title
+        GTK_WINDOW(pParent),                      // parent
+        GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,    // action
+        "_Cancel",                                // button text
+        GTK_RESPONSE_CANCEL,                      // button response id
+        "_Select",                                // button text
+        GTK_RESPONSE_ACCEPT,                      // button response id
+        NULL                                      // end of buttons
+    );
+
+    bool success = false;
+    if (gtk_dialog_run(GTK_DIALOG(pDialog)) == GTK_RESPONSE_ACCEPT)
+    {
+        gchar* gtkFilename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(pDialog));
+        path = static_cast<const char*>(gtkFilename);
+        g_free(gtkFilename);
+        success = true;
+    }
+
+    gtk_widget_destroy(pDialog);
+    gtk_widget_destroy(pParent);
+    while (gtk_events_pending())
+    {
+        gtk_main_iteration();
+    }
+    return success;
 }
 
 float getDisplayScaleFactor()

@@ -47,12 +47,21 @@ public:
     virtual void renderUI(Gui::Widgets& widget) override;
     virtual Properties getProperties() const override;
 
+    bool startCapture();
+    void stopCapture() { mIsCapturing = false; }
+    bool isCapturing() const { return mIsCapturing; }
+    void setUsePng(bool usePng) { mUsePng = usePng; }
+    bool getUsePng() const { return mUsePng; }
+
+    static void registerBindings(pybind11::module& m);
+
 private:
     void createTempTexture(const ref<Texture>& inTex);
     void dumpFrame(RenderContext* pRenderContext, const ref<Texture>& tex);
+    bool prepareOutputDirectory();
 
     ref<Texture> mTmpTex;
-    std::string mOutputDir = "c:/frameDump/";
+    std::string mOutputDir = "frame-dump";
     std::string mOutputBase = "frame";
     uint32_t mCurFrame = 0;
     uint32_t mFrameOffset = 0;

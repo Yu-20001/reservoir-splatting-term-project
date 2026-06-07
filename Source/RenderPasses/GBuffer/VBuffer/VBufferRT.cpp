@@ -50,6 +50,7 @@ const std::string kVBufferDesc = "V-buffer in packed format (indices + barycentr
 // Additional output channels.
 const ChannelList kVBufferExtraChannels = {
     // clang-format off
+    { "posW",           "gPosW",            "Position in world space",           true /* optional */, ResourceFormat::RGBA32Float },
     { "depth",          "gDepth",           "Depth buffer (NDC)",               true /* optional */, ResourceFormat::R32Float    },
     { "mvec",           "gMotionVector",    "Motion vector",                    true /* optional */, ResourceFormat::RG32Float   },
     { "viewW",          "gViewW",           "View direction in world space",    true /* optional */, ResourceFormat::RGBA32Float }, // TODO: Switch to packed 2x16-bit snorm format.

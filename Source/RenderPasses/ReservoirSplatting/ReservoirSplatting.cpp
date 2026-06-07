@@ -131,6 +131,17 @@ namespace
     const std::string kNumTimePartitions = "numTimePartitions";
 
     const uint32_t kSpatialNeighborSamples = 8192;
+    const std::string kDynamicObjectSphereNodeName = "ReservoirDemoSphere";
+    const std::string kDynamicObjectCubeNodeName = "ReservoirDemoCube";
+    const Gui::DropdownList kDynamicObjectTypeList =
+    {
+        { 0, "Metallic Sphere" },
+        { 1, "Rough Plastic Cube" },
+    };
+    const float3 kDynamicObjectHiddenPosition = float3(0.f, -10.f, 0.f);
+    const float kDynamicObjectScale = 0.05f;
+    const float kDynamicObjectFloorY = kDynamicObjectScale;
+    const float kDynamicObjectGravity = -0.6f;
     }
 
 extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
@@ -143,6 +154,9 @@ void ReservoirSplatting::registerBindings(pybind11::module& m)
 {
     pybind11::class_<ReservoirSplatting, RenderPass, ref<ReservoirSplatting>> pass(m, "ReservoirSplatting");
     pass.def("reset", &ReservoirSplatting::reset);
+    pass.def("spawnDynamicObject", &ReservoirSplatting::spawnDynamicObject);
+    pass.def("resetDynamicObject", &ReservoirSplatting::resetDynamicObject);
+    pass.def_property_readonly("dynamicObjectActive", &ReservoirSplatting::isDynamicObjectActive);
     pass.def_property_readonly("pixelStats", &ReservoirSplatting::getPixelStats);
 
     pass.def_property("useFixedSeed",
@@ -152,6 +166,10 @@ void ReservoirSplatting::registerBindings(pybind11::module& m)
     pass.def_property("fixedSeed",
         [](const ReservoirSplatting* pt) { return pt->mParams.fixedSeed; },
         [](ReservoirSplatting* pt, uint32_t value) { pt->mParams.fixedSeed = value; }
+    );
+    pass.def_property("seed",
+        [](const ReservoirSplatting* pt) { return pt->mParams.seed; },
+        [](ReservoirSplatting* pt, uint32_t value) { pt->mParams.seed = value; }
     );
 }
 
@@ -384,6 +402,12 @@ void ReservoirSplatting::setScene(RenderContext* pRenderContext, const ref<Scene
 
     resetPrograms();
     resetLighting();
+    mDynamicObjectSphereNodeID = NodeID::Invalid();
+    mDynamicObjectCubeNodeID = NodeID::Invalid();
+    mDynamicObjectActive = false;
+    mDynamicObjectVisible = false;
+    mDynamicObjectVelocityY = 0.f;
+    mDynamicObjectPosition = kDynamicObjectHiddenPosition;
 
     if (mpScene)
     {
@@ -393,11 +417,15 @@ void ReservoirSplatting::setScene(RenderContext* pRenderContext, const ref<Scene
         }
 
         validateOptions();
+        mDynamicObjectSphereNodeID = mpScene->findNodeIDByName(kDynamicObjectSphereNodeName);
+        mDynamicObjectCubeNodeID = mpScene->findNodeIDByName(kDynamicObjectCubeNodeName);
     }
 }
 
 void ReservoirSplatting::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
+    updateDynamicObject();
+
     if (!beginFrame(pRenderContext, renderData))
         return;
 
@@ -479,7 +507,8 @@ void ReservoirSplatting::execute(RenderContext* pRenderContext, const RenderData
         float* totalScattered = new float[screenPixelCount];
         std::memcpy(totalScattered, pTotalScattered, sizeof(float) * screenPixelCount);
 
-        std::ofstream output(mScatterDumpDir + "/" + mScatterDumpFile);
+        std::filesystem::create_directories(mScatterDumpDir);
+        std::ofstream output(std::filesystem::path(mScatterDumpDir) / mScatterDumpFile);
         for (uint32_t i = 0; i < screenPixelCount; i++)
         {
             output << totalScattered[i] << "\n";
@@ -522,6 +551,11 @@ void ReservoirSplatting::renderUI(Gui::Widgets& widget)
     if (auto renderingGroup = widget.group("Rendering Options", false))
     {
         dirty |= renderRenderingUI(renderingGroup);
+    }
+
+    if (auto dynamicObjectGroup = widget.group("Dynamic Object Demo", false))
+    {
+        renderDynamicObjectUI(dynamicObjectGroup);
     }
 
     // Stats and debug options.
@@ -803,6 +837,99 @@ void ReservoirSplatting::renderStatsUI(Gui::Widgets& widget)
 {
     // Show ray stats
     mpPixelStats->renderUI(widget);
+}
+
+void ReservoirSplatting::renderDynamicObjectUI(Gui::Widgets& widget)
+{
+    if (!mDynamicObjectSphereNodeID.isValid() && !mDynamicObjectCubeNodeID.isValid())
+    {
+        widget.text("Load data/scenes/reservoir_splatting_dynamic_cornell_box.pyscene");
+        return;
+    }
+
+    if (widget.dropdown("Object Type", kDynamicObjectTypeList, mDynamicObjectType))
+    {
+        resetDynamicObject();
+    }
+
+    widget.var("Spawn Position", mDynamicObjectSpawnPosition, -1.f, 1.f, 0.01f);
+
+    if (widget.button("Spawn"))
+    {
+        spawnDynamicObject();
+    }
+
+    if (widget.button("Reset", true))
+    {
+        resetDynamicObject();
+    }
+
+    const std::string objectName = mDynamicObjectType == 0 ? "Sphere" : "Cube";
+    widget.text(!mDynamicObjectVisible ? objectName + " hidden" : (mDynamicObjectActive ? objectName + " falling" : objectName + " resting"));
+}
+
+void ReservoirSplatting::updateDynamicObject()
+{
+    if (!mpScene || !getDynamicObjectNodeID().isValid() || !mDynamicObjectActive) return;
+
+    const float dt = mCameraParams.artificialFrameTime;
+    mDynamicObjectVelocityY += kDynamicObjectGravity * dt;
+    mDynamicObjectPosition.y += mDynamicObjectVelocityY * dt;
+
+    if (mDynamicObjectPosition.y <= kDynamicObjectFloorY)
+    {
+        mDynamicObjectPosition.y = kDynamicObjectFloorY;
+        mDynamicObjectVelocityY = 0.f;
+        mDynamicObjectActive = false;
+    }
+
+    setDynamicObjectPosition(mDynamicObjectPosition);
+}
+
+bool ReservoirSplatting::spawnDynamicObject()
+{
+    if (!mpScene || !getDynamicObjectNodeID().isValid()) return false;
+
+    const NodeID inactiveNodeID = mDynamicObjectType == 0 ? mDynamicObjectCubeNodeID : mDynamicObjectSphereNodeID;
+    setDynamicObjectNodePosition(inactiveNodeID, kDynamicObjectHiddenPosition);
+    mDynamicObjectActive = true;
+    mDynamicObjectVisible = true;
+    mDynamicObjectVelocityY = 0.f;
+    setDynamicObjectPosition(mDynamicObjectSpawnPosition);
+    reset();
+    return true;
+}
+
+NodeID ReservoirSplatting::getDynamicObjectNodeID() const
+{
+    return mDynamicObjectType == 0 ? mDynamicObjectSphereNodeID : mDynamicObjectCubeNodeID;
+}
+
+void ReservoirSplatting::setDynamicObjectPosition(const float3& position)
+{
+    setDynamicObjectNodePosition(getDynamicObjectNodeID(), position);
+    mDynamicObjectPosition = position;
+}
+
+void ReservoirSplatting::setDynamicObjectNodePosition(NodeID nodeID, const float3& position)
+{
+    if (!mpScene || !nodeID.isValid()) return;
+
+    Transform transform;
+    transform.setScaling(float3(kDynamicObjectScale));
+    transform.setTranslation(position);
+    mpScene->updateNodeTransform(nodeID.get(), transform.getMatrix());
+}
+
+void ReservoirSplatting::resetDynamicObject()
+{
+    mDynamicObjectActive = false;
+    mDynamicObjectVisible = false;
+    mDynamicObjectVelocityY = 0.f;
+    setDynamicObjectNodePosition(mDynamicObjectSphereNodeID, kDynamicObjectHiddenPosition);
+    setDynamicObjectNodePosition(mDynamicObjectCubeNodeID, kDynamicObjectHiddenPosition);
+    mDynamicObjectPosition = kDynamicObjectHiddenPosition;
+    reset();
 }
 
 bool ReservoirSplatting::onMouseEvent(const MouseEvent& mouseEvent)

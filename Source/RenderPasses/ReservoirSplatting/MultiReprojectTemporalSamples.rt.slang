@@ -158,6 +158,7 @@ struct MultiReprojectTemporalSamples
 
             uint index;
             InterlockedAdd(globalCounters[i][kCounterIndexDataCount], 1, index);
+            if (index >= params.frameDim.x * params.frameDim.y) continue;
 
             uint cellIndex;
             InterlockedAdd(cellCounters[i][linearizedIndex], 1, cellIndex);
@@ -182,7 +183,7 @@ void rayGen()
 {
     uint2 pixel = DispatchRaysIndex().xy;
     uint2 frameDim = DispatchRaysDimensions().xy;
-    if (all(pixel >= frameDim)) return;
+    if (any(pixel >= frameDim)) return;
 
     printSetPixel(pixel);
     gMultiReprojectTemporalSamples.run(pixel);

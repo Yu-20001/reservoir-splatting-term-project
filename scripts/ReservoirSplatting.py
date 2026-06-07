@@ -16,7 +16,7 @@ def render_graph_ReservoirSplatting():
         'enableSpatialResampling': True,
         'temporalReuse': "ScatterOnly",
         'numTimePartitions': 2,
-        'hybridMISOption': "Balance",
+        'scatterBackupMISOption': "Balance",
         'gatherOption': "Fast",
     }
 

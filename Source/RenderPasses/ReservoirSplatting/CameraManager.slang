@@ -50,13 +50,25 @@ struct CameraManager {
     float3 angularLerp(float3 prevForward, float3 currForward, float t)
     {
         // From https://www.gamedev.net/forums/topic/523136-slerping-two-vectors/523136/
-        float3 axis = normalize(cross(currForward, prevForward));
-        float angle = acos(dot(currForward, prevForward));
+        float cosTheta = clamp(dot(currForward, prevForward), -1.0f, 1.0f);
 
-        if (angle < 0.001f) {
+        if (cosTheta > 0.999999f) {
             // Both prevForward and currForward are basically the same thing here.
             return currForward;
         }
+
+        float3 axis = cross(currForward, prevForward);
+        float axisLength = length(axis);
+        if (axisLength < 1e-6f)
+        {
+            axis = normalize(abs(currForward.y) < 0.999f ? cross(currForward, float3(0.0f, 1.0f, 0.0f)) : cross(currForward, float3(1.0f, 0.0f, 0.0f)));
+        }
+        else
+        {
+            axis /= axisLength;
+        }
+
+        float angle = acos(cosTheta);
         float4 quat = rotate_angle_axis(angle * t, axis);
 
         return rotate_vector(currForward, quat);

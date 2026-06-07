@@ -1,0 +1,6 @@
+.cache/
+.tools/
+preview/
+*.aux
+*.log
+*.out

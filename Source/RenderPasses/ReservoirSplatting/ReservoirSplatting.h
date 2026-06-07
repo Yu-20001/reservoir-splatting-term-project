@@ -66,6 +66,9 @@ public:
     PixelStats& getPixelStats() { return *mpPixelStats; }
 
     void reset();
+    bool spawnDynamicObject();
+    void resetDynamicObject();
+    bool isDynamicObjectActive() const { return mDynamicObjectActive; }
 
     static void registerBindings(pybind11::module& m);
 
@@ -100,6 +103,11 @@ private:
     bool renderRenderingUI(Gui::Widgets& widget);
     bool renderDebugUI(Gui::Widgets& widget);
     void renderStatsUI(Gui::Widgets& widget);
+    void renderDynamicObjectUI(Gui::Widgets& widget);
+    void updateDynamicObject();
+    NodeID getDynamicObjectNodeID() const;
+    void setDynamicObjectPosition(const float3& position);
+    void setDynamicObjectNodePosition(NodeID nodeID, const float3& position);
     bool beginFrame(RenderContext* pRenderContext, const RenderData& renderData);
     void endFrame(RenderContext* pRenderContext, const RenderData& renderData);
     void tracePass(RenderContext* pRenderContext, const RenderData& renderData, TracePass& tracePass, uint z = 1);
@@ -211,6 +219,16 @@ private:
     bool                            mOptionsChanged = false;                ///< True if the config has changed since last frame.
     bool                            mGBufferAdjustShadingNormals = false;   ///< True if GBuffer/VBuffer has adjusted shading normals enabled.
 
+    // Dynamic object demo
+    NodeID                          mDynamicObjectSphereNodeID = NodeID::Invalid();
+    NodeID                          mDynamicObjectCubeNodeID = NodeID::Invalid();
+    uint32_t                        mDynamicObjectType = 0;
+    float3                          mDynamicObjectSpawnPosition = float3(0.f, 0.45f, 0.f);
+    float3                          mDynamicObjectPosition = float3(0.f, -10.f, 0.f);
+    float                           mDynamicObjectVelocityY = 0.f;
+    bool                            mDynamicObjectActive = false;
+    bool                            mDynamicObjectVisible = false;
+
     ref<ComputePass>                mpReflectTypes;                         ///< Helper for reflecting structured buffer types.
 
     // ReSTIR passes
@@ -263,7 +281,7 @@ private:
 
     // Temporal scatter visualization
     bool                            mDumpScatterCount = false;              ///< Dump the scatter count on next run.
-    std::string                     mScatterDumpDir = "c:/scatterCount/";   ///< Directory to output the scatter counts.
+    std::string                     mScatterDumpDir = "scatterCount";       ///< Directory to output the scatter counts.
     std::string                     mScatterDumpFile = "dump.txt";          ///< File to output the scatter counts.
     ref<Fence>                      mpReadbackFence;                        ///< Readback fence for staging.
     ref<Buffer>                     mpTotalCellCounters;                    ///< The total scatter count, including multi-scatter.

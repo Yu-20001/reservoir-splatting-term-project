@@ -35,6 +35,7 @@ import Utils.Debug.PixelDebug;
 RWTexture2D<PackedHitInfo> gVBuffer;
 RWTexture2D<float> gDepth;
 RWTexture2D<float2> gMotionVector;
+RWTexture2D<float4> gPosW;
 RWTexture2D<float4> gViewW;
 RWTexture2D<uint> gTime;
 RWTexture2D<float> gMask;
@@ -121,6 +122,8 @@ struct VBufferRT
             gDepth[pixel] = depth;
         if (is_valid(gMotionVector))
             gMotionVector[pixel] = motionVector;
+        if (is_valid(gPosW))
+            gPosW[pixel] = float4(v.posW, 1.0f);
         if (is_valid(gMask))
             gMask[pixel] = 1.0f;
     }
@@ -146,6 +149,8 @@ struct VBufferRT
             gDepth[pixel] = 1.f;
         if (is_valid(gMotionVector))
             gMotionVector[pixel] = motionVector;
+        if (is_valid(gPosW))
+            gPosW[pixel] = float4(0.0f);
         if (is_valid(gMask))
             gMask[pixel] = 0.0f;
     }

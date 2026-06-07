@@ -605,8 +605,8 @@ void Texture::captureToFile(
     // Handle the special case where we have an HDR texture with less then 3 channels.
     FormatType type = getFormatType(mFormat);
     uint32_t channels = getFormatChannelCount(mFormat);
-    std::vector<uint8_t> textureData;
     ResourceFormat resourceFormat = mFormat;
+    CopyContext::ReadTextureTask::SharedPtr pReadTask;
 
     if (type == FormatType::Float && channels < 3)
     {
@@ -620,22 +620,36 @@ void Texture::captureToFile(
             ResourceBindFlags::RenderTarget | ResourceBindFlags::ShaderResource
         );
         pContext->blit(getSRV(mipLevel, 1, arraySlice, 1), pOther->getRTV(0, 0, 1));
-        textureData = pContext->readTextureSubresource(pOther.get(), 0);
+        pReadTask = pContext->asyncReadTextureSubresource(pOther.get(), 0);
         resourceFormat = ResourceFormat::RGBA32Float;
     }
     else
     {
         uint32_t subresource = getSubresourceIndex(arraySlice, mipLevel);
-        textureData = pContext->readTextureSubresource(this, subresource);
+        pReadTask = pContext->asyncReadTextureSubresource(this, subresource);
     }
 
     uint32_t width = getWidth(mipLevel);
     uint32_t height = getHeight(mipLevel);
 
-    auto func = [=]() { Bitmap::saveImage(path, width, height, format, exportFlags, resourceFormat, true, (void*)textureData.data()); };
+    auto func = [=]() {
+        auto textureData = pReadTask->getData();
+        Bitmap::saveImage(path, width, height, format, exportFlags, resourceFormat, true, (void*)textureData.data());
+    };
 
     if (async)
-        Threading::dispatchTask(func);
+    {
+        Threading::dispatchTask([=]() {
+            try
+            {
+                func();
+            }
+            catch (const std::exception& e)
+            {
+                logError("Texture::captureToFile() - failed to save '{}': {}", path, e.what());
+            }
+        });
+    }
     else
         func();
 }

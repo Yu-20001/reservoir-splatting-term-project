@@ -188,7 +188,7 @@ void rayGen()
 {
     uint2 pixel = DispatchRaysIndex().xy;
     uint2 frameDim = DispatchRaysDimensions().xy;
-    if (all(pixel >= frameDim)) return;
+    if (any(pixel >= frameDim)) return;
 
     printSetPixel(pixel);
     gScatterTemporalResampling.run(pixel);

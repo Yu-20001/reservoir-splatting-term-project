@@ -735,6 +735,11 @@ namespace Falcor
         */
         void updateNodeTransform(uint32_t nodeID, const float4x4& transform);
 
+        /** Find a scene graph node by name.
+            \return Node ID if found, otherwise NodeID::Invalid().
+        */
+        NodeID findNodeIDByName(const std::string& name) const;
+
         /** Get the number of custom primitives.
         */
         uint32_t getCustomPrimitiveCount() const { return (uint32_t)mCustomPrimitiveDesc.size(); }

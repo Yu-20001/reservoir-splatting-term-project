@@ -11,6 +11,7 @@
 # Packman folders.
 /external/packman/
 /tools/.packman/
+/.cache/
 
 # IDE folders.
 /.vs/
@@ -18,6 +19,24 @@
 
 # User files.
 /CMakeUserPresets.json
+/.worktrees/
+/frame-dump/
+/recordings/
+/benchmark-results/
+/phase3-results/
+
+# Local automation and investigation artifacts.
+/.agents/
+/.codex/
+/.continue/
+/.superpowers/
+/AGENTS.md
+/docs/superpowers/
+/docs/reservoir-splatting-capture-notes.md
+/c:/
+/scatterCount/
+/disocclusion-results/captures/
+/disocclusion-results/analysis*/disocclusion-mask-*.exr
 
 # File types.
 *.user
@@ -25,7 +44,7 @@
 *.pyc
 *.VC.db
 *.VC.opendb
-*.pyc
+*.log
 *slang-dump-*
 *.mp4
 *.tlog

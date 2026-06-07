@@ -2,6 +2,18 @@
 
 ![](docs/images/reservoir-splatting.png)
 
+## Term Project Extension
+
+This fork reproduces Reservoir Splatting on Linux/Vulkan and extends it with
+an interactive dynamic-object scene, deterministic capture scripts, GPU timing,
+and a reference-based camera-disocclusion evaluation.
+
+- [Final report](report/reservoir-splatting-report.pdf)
+- [Submission and reproduction notes](docs/reproduction/reservoir-splatting-submission-notes.md)
+- [Evaluation results](docs/reproduction/reservoir-splatting-phase3-evaluation.md)
+- [Disocclusion experiment](disocclusion-results/README.md)
+- [Dynamic Cornell Box scene](data/scenes/reservoir_splatting_dynamic_cornell_box.pyscene)
+
 ## Overview
 
 This repository contains the code for the SIGGRAPH 2025 paper:

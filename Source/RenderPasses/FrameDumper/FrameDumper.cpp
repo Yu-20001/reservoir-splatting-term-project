@@ -28,6 +28,8 @@
 #include "FrameDumper.h"
 #include "Core/AssetResolver.h"
 
+#include <cstdio>
+
 namespace
 {
 const char kDst[] = "dst";
@@ -41,18 +43,30 @@ const std::string kFrameOffset = "frameOffset";
 extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
 {
     registry.registerClass<RenderPass, FrameDumper>();
+    ScriptBindings::registerBinding(FrameDumper::registerBindings);
+}
+
+void FrameDumper::registerBindings(pybind11::module& m)
+{
+    pybind11::class_<FrameDumper, RenderPass, ref<FrameDumper>> pass(m, "FrameDumper");
+    pass.def("startCapture", &FrameDumper::startCapture);
+    pass.def("stopCapture", &FrameDumper::stopCapture);
+    pass.def_property_readonly("capturing", &FrameDumper::isCapturing);
+    pass.def_property("usePng", &FrameDumper::getUsePng, &FrameDumper::setUsePng);
 }
 
 FrameDumper::FrameDumper(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice)
 {
     for (const auto& [key, value] : props)
     {
-        //if (key == kOutputDir)
-        //    mOutputDir = value;
-        //else if (key == kOutputBase)
-        //    mOutputBase = value;
-        //else
-        logWarning("Unknown property '{}' in a FrameDumper properties.", key);
+        if (key == kOutputDir)
+            mOutputDir = std::string(value);
+        else if (key == kOutputBase)
+            mOutputBase = std::string(value);
+        else if (key == kFrameOffset)
+            mFrameOffset = value;
+        else
+            logWarning("Unknown property '{}' in a FrameDumper properties.", key);
     }
 }
 
@@ -112,7 +126,15 @@ void FrameDumper::execute(RenderContext* pRenderContext, const RenderData& rende
     {
         if (mIsCapturing)
         {
-            dumpFrame(pRenderContext, pSrcTex);
+            try
+            {
+                dumpFrame(pRenderContext, pSrcTex);
+            }
+            catch (const std::exception& e)
+            {
+                logError("FrameDumper::dumpFrame() - capture stopped: {}", e.what());
+                mIsCapturing = false;
+            }
         }
 
         pRenderContext->blit(
@@ -134,7 +156,7 @@ void FrameDumper::dumpFrame(RenderContext* pRenderContext, const ref<Texture>& t
 
     if (mUsePng)
     {
-        sprintf_s(name, "%s/%s.%05d.png", mOutputDir.c_str(), mOutputBase.c_str(), frameId);
+        std::snprintf(name, sizeof(name), "%s/%s.%05d.png", mOutputDir.c_str(), mOutputBase.c_str(), frameId);
         std::filesystem::path fPath = name;
         if (!mUseIntermediateTex)
         {
@@ -148,12 +170,17 @@ void FrameDumper::dumpFrame(RenderContext* pRenderContext, const ref<Texture>& t
     }
     else
     {
-        sprintf_s(name, "%s/%s.%05d.pam", mOutputDir.c_str(), mOutputBase.c_str(), frameId);
+        std::snprintf(name, sizeof(name), "%s/%s.%05d.pam", mOutputDir.c_str(), mOutputBase.c_str(), frameId);
         pRenderContext->blit(tex->getSRV(), mTmpTex->getRTV());
         std::vector<uint8_t> textureData = pRenderContext->readTextureSubresource(mTmpTex.get(), 0);
 
         FILE* fp = fopen(name, "wb");
-        fprintf_s(fp, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n",
+        if (!fp)
+        {
+            logError("FrameDumper::dumpFrame() - failed to open '{}'", name);
+            return;
+        }
+        std::fprintf(fp, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n",
             tex->getWidth(), tex->getHeight());
         fwrite(textureData.data(), sizeof(uint8_t), textureData.size(), fp);
         fclose(fp);
@@ -174,12 +201,36 @@ void FrameDumper::dumpFrame(RenderContext* pRenderContext, const ref<Texture>& t
     */
 }
 
+bool FrameDumper::prepareOutputDirectory()
+{
+    std::error_code ec;
+    std::filesystem::create_directories(mOutputDir, ec);
+    if (ec)
+    {
+        logError("FrameDumper - failed to create output directory '{}': {}", mOutputDir, ec.message());
+        return false;
+    }
+
+    return true;
+}
+
+bool FrameDumper::startCapture()
+{
+    if (!prepareOutputDirectory()) return false;
+
+    mIsCapturing = true;
+    mCurFrame = 0;
+    return true;
+}
+
 void FrameDumper::renderUI(Gui::Widgets& widget)
 {
     if (widget.button(mIsCapturing ? "Stop Capture" : "Start Capture"))
     {
-        mIsCapturing = !mIsCapturing;
-        mCurFrame = 0;
+        if (mIsCapturing)
+            stopCapture();
+        else
+            startCapture();
     }
 
     widget.text("Output Directory: " + mOutputDir);
@@ -200,4 +251,3 @@ void FrameDumper::renderUI(Gui::Widgets& widget)
     else
         widget.text("No temporary texture available!");
 }
-

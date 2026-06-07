@@ -96,7 +96,9 @@ struct MultiSortReprojectedReservoirs
 
             // print("Sorted Index", cellOffsets[linearizedIndex] + cellIndex);
 
-            sortedReservoirs[i][cellOffsets[i][linearizedIndex] + cellIndex] = prevPixel;
+            const uint sortedIndex = cellOffsets[i][linearizedIndex] + cellIndex;
+            if (sortedIndex >= cellCount) continue;
+            sortedReservoirs[i][sortedIndex] = prevPixel;
         }
     }
 };

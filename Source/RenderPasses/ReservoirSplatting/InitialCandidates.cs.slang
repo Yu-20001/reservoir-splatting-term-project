@@ -150,7 +150,7 @@ cbuffer CB
 void main(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     uint2 pixel = dispatchThreadId.xy;
-    if (all(pixel >= gPathTracer.params.frameDim)) return;
+    if (any(pixel >= gPathTracer.params.frameDim)) return;
 
     gInitialCandidates.run(pixel);
 }
